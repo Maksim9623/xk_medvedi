@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}События{% endblock %}
+
+{% block content %}
+<div class="events-page">
+    <h1>События команды</h1>
+    
+    <div class="events-filter">
+        <a href="{{ url_for('events', type='all') }}" class="btn {% if event_type == 'all' %}btn-primary{% else %}btn-secondary{% endif %}">Все</a>
+        <a href="{{ url_for('events', type='games') }}" class="btn {% if event_type == 'games' %}btn-primary{% else %}btn-secondary{% endif %}">Игры</a>
+        <a href="{{ url_for('events', type='trainings') }}" class="btn {% if event_type == 'trainings' %}btn-primary{% else %}btn-secondary{% endif %}">Тренировки</a>
+    </div>
+    
+    {% if events %}
+        <div class="events-list">
+            {% for event in events %}
+            <div class="event-item">
+                <div class="event-info">
+                    <h3>{{ event.title }}</h3>
+                    <p><strong>Тип:</strong> {{ 'Игра' if event.event_type == 'game' else 'Тренировка' }}</p>
+                    <p><strong>Дата и время:</strong> {{ event.datetime.strftime('%d.%m.%Y %H:%M') }}</p>
+                    <p><strong>Место:</strong> {{ event.location }}</p>
+                    {% if event.opponent %}
+                    <p><strong>Соперник:</strong> {{ event.opponent }}</p>
+                    {% endif %}
+                </div>
+                <div class="event-actions">
+                    <a href="{{ url_for('event_detail', event_id=event.id) }}" class="btn">Подробнее</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>Событий пока нет.</p>
+    {% endif %}
+</div>
+{% endblock %}

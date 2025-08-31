@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Профиль{% endblock %}
+
+{% block content %}
+<div class="profile-page">
+    <h1>Ваш профиль</h1>
+    
+    <div class="profile-info">
+        <p><strong>Логин:</strong> {{ current_user.username }}</p>
+        <p><strong>Телефон:</strong> {{ current_user.phone }}</p>
+        <p><strong>Имя:</strong> {{ current_user.first_name if current_user.first_name else 'Не указано' }}</p>
+        <p><strong>Фамилия:</strong> {{ current_user.last_name if current_user.last_name else 'Не указано' }}</p>
+        <p><strong>Роль:</strong> 
+            {% if current_user.role == 'admin' %}Администратор
+            {% elif current_user.role == 'captain' %}Капитан
+            {% else %}Игрок{% endif %}
+        </p>
+    </div>
+    
+    <div class="profile-form">
+        <h3>Обновить информацию</h3>
+        <form method="POST" action="{{ url_for('update_profile') }}">
+            <div class="form-group">
+                <label for="first_name">Имя:</label>
+                <input type="text" id="first_name" name="first_name" value="{{ current_user.first_name if current_user.first_name else '' }}">
+            </div>
+            
+            <div class="form-group">
+                <label for="last_name">Фамилия:</label>
+                <input type="text" id="last_name" name="last_name" value="{{ current_user.last_name if current_user.last_name else '' }}">
+            </div>
+            
+            <div class="form-group">
+                <label for="position">Амплуа:</label>
+                <select id="position" name="position">
+                    <option value="">Выберите амплуа</option>
+                    <option value="вратарь" {% if current_user.position == 'вратарь' %}selected{% endif %}>Вратарь</option>
+                    <option value="защитник" {% if current_user.position == 'защитник' %}selected{% endif %}>Защитник</option>
+                    <option value="нападающий" {% if current_user.position == 'нападающий' %}selected{% endif %}>Нападающий</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="number">Номер:</label>
+                <input type="number" id="number" name="number" value="{{ current_user.number if current_user.number else '' }}" min="1" max="99">
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Сохранить</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Административная панель{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    <h1>Административная панель</h1>
+    
+    <div class="users-list">
+        <h2>Пользователи</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Имя</th>
+                    <th>Логин</th>
+                    <th>Телефон</th>
+                    <th>Роль</th>
+                    <th>Статус</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.get_full_name() }}</td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.phone }}</td>
+                    <td>
+                        <select id="role-{{ user.id }}" onchange="updateRole({{ user.id }})">
+                            <option value="player" {% if user.role == 'player' %}selected{% endif %}>Игрок</option>
+                            <option value="captain" {% if user.role == 'captain' %}selected{% endif %}>Капитан</option>
+                            <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Администратор</option>
+                        </select>
+                    </td>
+                    <td>
+                        <span class="status-badge {% if user.is_active %}active{% else %}inactive{% endif %}">
+                            {{ 'Активен' if user.is_active else 'Неактивен' }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function updateRole(userId) {
+    const role = document.getElementById(`role-${userId}`).value;
+    
+    fetch('/admin/update_role', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+            'user_id': userId,
+            'role': role
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Роль обновлена!');
+        } else {
+            alert('Ошибка обновления роли');
+        }
+    });
+}
+</script>
+{% endblock %}

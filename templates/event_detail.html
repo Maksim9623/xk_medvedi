@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}{{ event.title }}{% endblock %}
+
+{% block content %}
+<div class="event-detail">
+    <h1>{{ event.title }}</h1>
+    
+    <div class="event-info">
+        <p><strong>Тип:</strong> {{ 'Игра' if event.event_type == 'game' else 'Тренировка' }}</p>
+        <p><strong>Дата и время:</strong> {{ event.datetime.strftime('%d.%m.%Y %H:%M') }}</p>
+        <p><strong>Место:</strong> {{ event.location }}</p>
+        {% if event.opponent %}
+        <p><strong>Соперник:</strong> {{ event.opponent }}</p>
+        {% endif %}
+        {% if event.description %}
+        <p><strong>Описание:</strong> {{ event.description }}</p>
+        {% endif %}
+    </div>
+    
+    <div class="response-section">
+        <h3>Ваш ответ</h3>
+        
+        <!-- Статистика ответов -->
+        <div class="response-stats">
+            {% set attending_count = responses|selectattr('status', 'equalto', 'attending')|list|length %}
+            {% set maybe_count = responses|selectattr('status', 'equalto', 'maybe')|list|length %}
+            {% set not_attending_count = responses|selectattr('status', 'equalto', 'not_attending')|list|length %}
+            
+            <div class="stats-grid">
+                <div class="stat-item attending">
+                    <span class="stat-number">{{ attending_count }}</span>
+                    <span class="stat-label">Будут</span>
+                </div>
+                <div class="stat-item maybe">
+                    <span class="stat-number">{{ maybe_count }}</span>
+                    <span class="stat-label">Возможно</span>
+                </div>
+                <div class="stat-item not-attending">
+                    <span class="stat-number">{{ not_attending_count }}</span>
+                    <span class="stat-label">Не будут</span>
+                </div>
+            </div>
+        </div>
+        <form method="POST" action="{{ url_for('event_response') }}">
+            <input type="hidden" name="event_id" value="{{ event.id }}">
+            
+            <div class="response-buttons">
+                <button type="submit" name="status" value="attending" class="btn btn-success">Буду</button>
+                <button type="submit" name="status" value="maybe" class="btn btn-warning">Возможно</button>
+                <button type="submit" name="status" value="not_attending" class="btn btn-danger">Не буду</button>
+            </div>
+            
+            <div class="form-group">
+                <label for="comment">Комментарий (необязательно):</label>
+                <textarea id="comment" name="comment" rows="3"></textarea>
+            </div>
+        </form>
+        
+        {% if user_response %}
+        <p class="current-response">
+            <strong>Текущий статус:</strong> 
+            {% if user_response.status == 'attending' %}
+                <span class="status-attending">Буду</span>
+            {% elif user_response.status == 'not_attending' %}
+                <span class="status-not-attending">Не буду</span>
+            {% elif user_response.status == 'maybe' %}
+                <span class="status-maybe">Возможно</span>
+            {% endif %}
+            {% if user_response.comment %}
+                <br><strong>Комментарий:</strong> {{ user_response.comment }}
+            {% endif %}
+        </p>
+        {% endif %}
+    </div>
+    
+    {% if lineup %}
+    <div class="lineup-section">
+        <h3>Состав на игру</h3>
+        <div class="lineup-info">
+            {% if current_user.role in ['captain', 'admin'] %}
+                <a href="{{ url_for('lineup', event_id=event.id) }}" class="btn">Управление составом</a>
+            {% endif %}
+            
+            {% set user_assignment = lineup.assignments|selectattr('user_id', 'equalto', current_user.id)|first %}
+            {% if user_assignment %}
+                <div class="player-position">
+                    <h4>Ваша позиция в составе:</h4>
+                    <p><strong>Позиция:</strong> {{ user_assignment.position }}</p>
+                    {% if user_assignment.line %}
+                        <p><strong>Звено:</strong> {{ user_assignment.line }}</p>
+                    {% endif %}
+                </div>
+            {% endif %}
+            
+            <h4>Полный состав:</h4>
+            
+            <!-- Вратари -->
+            <div class="goalkeepers-section">
+                <h4>Вратари</h4>
+                <div class="unit-players">
+                    {% set goalkeeper_assignments = lineup.assignments|selectattr('position', 'equalto', 'вратарь') %}
+                    {% for assignment in goalkeeper_assignments %}
+                    <div class="unit-player">
+                        <strong>{{ assignment.user.get_full_name() }}</strong>
+                        <span class="position-badge">{{ assignment.position }}</span>
+                        {% if assignment.jersey_type %}
+                            <span class="jersey-badge jersey-{{ assignment.jersey_type }}">Вратарская</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    {% if goalkeeper_assignments|list|length == 0 %}
+                    <p class="no-players">Вратари не назначены</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Звенья -->
+            <div class="lineup-by-units">
+                {% for unit_num in range(1, 7) %}
+                <div class="unit-section">
+                    <h4>{{ unit_num }} звено</h4>
+                    <div class="unit-players">
+                        {% set unit_assignments = lineup.assignments|selectattr('line', 'equalto', unit_num|string)|selectattr('position', 'ne', 'вратарь') %}
+                        {% for assignment in unit_assignments %}
+                        <div class="unit-player">
+                            <strong>{{ assignment.user.get_full_name() }}</strong>
+                            <span class="position-badge">{{ assignment.position }}</span>
+                            {% if assignment.jersey_type %}
+                                <span class="jersey-badge jersey-{{ assignment.jersey_type }}">
+                                    {% if assignment.jersey_type == 'white' %}Белая
+                                    {% elif assignment.jersey_type == 'black' %}Черная
+                                    {% endif %}
+                                </span>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                        {% if unit_assignments|list|length == 0 %}
+                        <p class="no-players">Игроки не назначены</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% if current_user.role in ['captain', 'admin'] %}
+    <div class="admin-section">
+        <h3>Управление событием</h3>
+        {% if not lineup %}
+            <a href="{{ url_for('lineup', event_id=event.id) }}" class="btn">Создать состав</a>
+        {% endif %}
+        
+        {% if responses %}
+        <h4>Ответы игроков:</h4>
+        <div class="responses-list">
+            {% for response in responses %}
+            <div class="response-item">
+                <strong>{{ response.user.get_full_name() }}</strong>: 
+                {% if response.status == 'attending' %}
+                    <span class="status-attending">Буду</span>
+                {% elif response.status == 'not_attending' %}
+                    <span class="status-not-attending">Не буду</span>
+                {% elif response.status == 'maybe' %}
+                    <span class="status-maybe">Возможно</span>
+                {% endif %}
+                {% if response.comment %}
+                    - {{ response.comment }}
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

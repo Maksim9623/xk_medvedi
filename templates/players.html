@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Игроки команды{% endblock %}
+
+{% block content %}
+<div class="players-page">
+    <h1>Игроки команды</h1>
+    
+    <div class="players-grid">
+        {% for player in players %}
+        <div class="player-card">
+            <div class="player-header">
+                <h3>{{ player.get_full_name() }}</h3>
+                {% if player.number %}
+                    <span class="player-number">№{{ player.number }}</span>
+                {% endif %}
+            </div>
+            
+            <div class="player-info">
+                <p><strong>Логин:</strong> {{ player.username }}</p>
+                <p><strong>Телефон:</strong> {{ player.phone }}</p>
+                {% if player.position %}
+                    <p><strong>Позиция:</strong> 
+                        <span class="position-badge position-{{ player.position }}">
+                            {% if player.position == 'вратарь' %}Вратарь
+                            {% elif player.position == 'защитник' %}Защитник
+                            {% elif player.position == 'нападающий' %}Нападающий
+                            {% else %}{{ player.position }}{% endif %}
+                        </span>
+                    </p>
+                {% endif %}
+                <p><strong>Роль:</strong> 
+                    {% if player.role == 'captain' %}
+                        <span class="role-badge role-captain">Капитан</span>
+                    {% else %}
+                        <span class="role-badge role-player">Игрок</span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+        {% else %}
+        <div class="no-players">
+            <p>Пока нет зарегистрированных игроков.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Создать событие{% endblock %}
+
+{% block content %}
+<div class="create-event">
+    <h1>Создать новое событие</h1>
+    
+    <form method="POST" action="{{ url_for('create_event') }}">
+        <div class="form-group">
+            <label for="title">Название события:</label>
+            <input type="text" id="title" name="title" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="event_type">Тип события:</label>
+            <select id="event_type" name="event_type" required>
+                <option value="game">Игра</option>
+                <option value="training">Тренировка</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="datetime">Дата и время:</label>
+            <input type="datetime-local" id="datetime" name="datetime" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="location">Место проведения:</label>
+            <input type="text" id="location" name="location" required>
+        </div>
+        
+        <div class="form-group" id="opponent-group">
+            <label for="opponent">Соперник:</label>
+            <input type="text" id="opponent" name="opponent">
+        </div>
+        
+        <div class="form-group">
+            <label for="description">Описание:</label>
+            <textarea id="description" name="description" rows="4"></textarea>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Создать событие</button>
+        <a href="{{ url_for('events') }}" class="btn btn-secondary">Отмена</a>
+    </form>
+</div>
+
+<script>
+document.getElementById('event_type').addEventListener('change', function() {
+    const opponentGroup = document.getElementById('opponent-group');
+    opponentGroup.style.display = this.value === 'game' ? 'block' : 'none';
+});
+</script>
+{% endblock %}

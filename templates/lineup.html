@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}Состав на {{ event.title }}{% endblock %}
+
+{% block content %}
+<div class="lineup-page">
+    <h1>Состав на {{ event.title }}</h1>
+    <p><strong>Дата:</strong> {{ event.datetime.strftime('%d.%m.%Y %H:%M') }}</p>
+    
+    {% if players %}
+        <div class="info-box">
+            <p><strong>Доступно для расстановки:</strong> {{ players|length }} игроков, которые отметились на событие</p>
+        </div>
+    {% else %}
+        <div class="warning-box">
+            <p><strong>Внимание:</strong> Пока нет игроков, которые отметились на это событие. Состав можно будет сформировать после того, как игроки подтвердят участие.</p>
+        </div>
+    {% endif %}
+    
+    <div class="lineup-editor">
+        <h3>Расстановка игроков</h3>
+        
+        {% for player in players %}
+        <div class="lineup-player">
+            <div class="player-info">
+                <strong>{{ player.get_full_name() }}</strong>
+                {% if player.number %}(#{{ player.number }}){% endif %}
+                {% if player.position %}- {{ player.position }}{% endif %}
+            </div>
+            
+            <div class="player-assignment">
+                <select id="position-{{ player.id }}" class="form-select" onchange="updateJerseyOptions({{ player.id }})">
+                    <option value="">Выберите позицию</option>
+                    <option value="вратарь">Вратарь</option>
+                    <option value="защитник">Защитник</option>
+                    <option value="нападающий">Нападающий</option>
+                </select>
+                
+                <select id="line-{{ player.id }}" class="form-select" onchange="updateJerseyType({{ player.id }})">
+                    <option value="">Звено</option>
+                    <option value="1">1 звено</option>
+                    <option value="2">2 звено</option>
+                    <option value="3">3 звено</option>
+                    <option value="4">4 звено</option>
+                    <option value="5">5 звено</option>
+                    <option value="6">6 звено</option>
+                </select>
+                
+                <select id="jersey-{{ player.id }}" class="form-select">
+                    <option value="">Тип майки</option>
+                    <option value="white">Белая майка</option>
+                    <option value="black">Черная майка</option>
+                    <option value="goalkeeper">Вратарская майка</option>
+                </select>
+                
+                <button onclick="updateLineup({{lineup.id}}, {{player.id}})" class="btn btn-sm btn-primary">
+                    Сохранить
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div class="current-lineup">
+        <h3>Текущий состав</h3>
+        {% if assignments %}
+            <!-- Вратари -->
+            <div class="goalkeepers-section">
+                <h4>Вратари</h4>
+                <div class="unit-players">
+                    {% set goalkeeper_assignments = assignments|selectattr('position', 'equalto', 'вратарь') %}
+                    {% for assignment in goalkeeper_assignments %}
+                    <div class="unit-player">
+                        <strong>{{ assignment.user.get_full_name() }}</strong>
+                        <span class="position-badge">{{ assignment.position }}</span>
+                        {% if assignment.jersey_type %}
+                            <span class="jersey-badge jersey-{{ assignment.jersey_type }}">Вратарская</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    {% if goalkeeper_assignments|list|length == 0 %}
+                    <p class="no-players">Вратари не назначены</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Звенья -->
+            <div class="lineup-by-units">
+                {% for unit_num in range(1, 7) %}
+                <div class="unit-section">
+                    <h4>{{ unit_num }} звено</h4>
+                    <div class="unit-players">
+                        {% set unit_assignments = assignments|selectattr('line', 'equalto', unit_num|string)|selectattr('position', 'ne', 'вратарь') %}
+                        {% for assignment in unit_assignments %}
+                        <div class="unit-player">
+                            <strong>{{ assignment.user.get_full_name() }}</strong>
+                            <span class="position-badge">{{ assignment.position }}</span>
+                            {% if assignment.jersey_type %}
+                                <span class="jersey-badge jersey-{{ assignment.jersey_type }}">
+                                    {% if assignment.jersey_type == 'white' %}Белая
+                                    {% elif assignment.jersey_type == 'black' %}Черная
+                                    {% endif %}
+                                </span>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                        {% if unit_assignments|list|length == 0 %}
+                        <p class="no-players">Игроки не назначены</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>Состав еще не сформирован.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function updateLineup(lineupId, userId) {
+    const position = document.getElementById(`position-${userId}`).value;
+    const line = document.getElementById(`line-${userId}`).value;
+    const jersey = document.getElementById(`jersey-${userId}`).value;
+    
+    fetch('/update_lineup', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+            'lineup_id': lineupId,
+            'user_id': userId,
+            'position': position,
+            'line': line,
+            'jersey_type': jersey
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Позиция обновлена!');
+            location.reload();
+        } else {
+            alert(data.error || 'Ошибка обновления');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Произошла ошибка при обновлении');
+    });
+}
+
+function updateJerseyOptions(userId) {
+    const position = document.getElementById(`position-${userId}`).value;
+    const jerseySelect = document.getElementById(`jersey-${userId}`);
+    
+    // Очищаем текущие опции
+    jerseySelect.innerHTML = '<option value="">Тип майки</option>';
+    
+    if (position === 'вратарь') {
+        jerseySelect.innerHTML += '<option value="goalkeeper">Вратарская майка</option>';
+    } else if (position === 'защитник' || position === 'нападающий') {
+        jerseySelect.innerHTML += '<option value="white">Белая майка</option>';
+        jerseySelect.innerHTML += '<option value="black">Черная майка</option>';
+    }
+}
+
+function updateJerseyType(userId) {
+    const line = document.getElementById(`line-${userId}`).value;
+    const position = document.getElementById(`position-${userId}`).value;
+    const jerseySelect = document.getElementById(`jersey-${userId}`);
+    
+    if (position === 'вратарь') {
+        jerseySelect.value = 'goalkeeper';
+    } else if (line && (position === 'защитник' || position === 'нападающий')) {
+        const lineNum = parseInt(line);
+        if (lineNum >= 1 && lineNum <= 3) {
+            jerseySelect.value = 'white';
+        } else if (lineNum >= 4 && lineNum <= 6) {
+            jerseySelect.value = 'black';
+        }
+    }
+}
+</script>
+{% endblock %}
